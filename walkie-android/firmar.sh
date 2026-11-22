@@ -13,6 +13,8 @@ F=firma
 PW=$(grep '^storePassword=' "$F/firma.properties" | cut -d= -f2-)
 APKSIGNER=$(ls "$HOME"/Android/Sdk/build-tools/*/apksigner | sort -V | tail -1)
 
+# JDK de Android Studio si está instalado (en otro computador, el JAVA_HOME del sistema)
+[ -z "${JAVA_HOME:-}" ] && [ -d /snap/android-studio/current/jbr ] && export JAVA_HOME=/snap/android-studio/current/jbr
 ./gradlew -q assembleRelease
 
 "$APKSIGNER" sign \
