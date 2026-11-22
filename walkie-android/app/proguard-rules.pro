@@ -1,0 +1,2 @@
+-keepattributes *Annotation*,Signature
+-dontwarn com.google.**

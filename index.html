@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<title>Radio Barrio</title>
+<style>
+  :root {
+    --bg: #111418; --panel: #1b2027; --panel2: #242b34; --texto: #eef1f4; --suave: #9aa5b1;
+    --acento: #3fb27f; --mio: #1f4d3a; --sos: #d6333a; --sos-bg: #4a1518; --aviso: #e0a526;
+    --borde: #2e3640;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto);
+    font: 17px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; height: 100dvh; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; color: inherit; }
+  input, textarea { font: inherit; color: var(--texto); background: var(--panel2);
+    border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; width: 100%; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--borde); }
+  header h1 { font-size: 18px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #punto { width: 11px; height: 11px; border-radius: 50%; background: var(--sos); flex: none; }
+  #punto.ok { background: var(--acento); }
+  #btnSos { background: var(--sos); color: #fff; font-weight: 800; padding: 9px 16px; letter-spacing: .5px; }
+
+  nav { display: flex; background: var(--panel); border-bottom: 1px solid var(--borde); }
+  nav button { flex: 1; background: none; padding: 11px 4px; border-radius: 0; font-size: 15px;
+    color: var(--suave); border-bottom: 3px solid transparent; position: relative; }
+  nav button.activo { color: var(--texto); border-bottom-color: var(--acento); }
+  nav button[data-canal="emergencias"].activo { border-bottom-color: var(--sos); }
+  nav button { white-space: nowrap; }
+  .badge { position: absolute; top: 2px; right: 2px; min-width: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--sos); color: #fff; font-size: 11px; line-height: 18px; }
+
+  main { flex: 1; overflow-y: auto; padding: 12px; }
+  .msg { max-width: 85%; margin: 0 0 10px; padding: 8px 12px; border-radius: 14px; background: var(--panel2);
+    word-wrap: break-word; white-space: pre-wrap; }
+  .msg.mio { margin-left: auto; background: var(--mio); }
+  .msg.sos { background: var(--sos-bg); border: 2px solid var(--sos); max-width: 100%; }
+  .msg .meta { font-size: 13px; color: var(--suave); margin-bottom: 2px; white-space: normal; }
+  .msg .meta b { color: var(--texto); }
+  .msg audio { width: 240px; max-width: 100%; display: block; margin-top: 4px; }
+  .msg img { max-width: 100%; max-height: 300px; border-radius: 8px; display: block; margin-top: 4px; }
+  .vacio { color: var(--suave); text-align: center; margin-top: 30px; }
+
+  footer { display: flex; gap: 8px; padding: 10px; background: var(--panel); border-top: 1px solid var(--borde);
+    padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  footer textarea { flex: 1; resize: none; height: 46px; }
+  .icono { background: var(--panel2); padding: 0 12px; font-size: 20px; flex: none; }
+  #btnEnviar { background: var(--acento); color: #fff; font-weight: 700; padding: 0 16px; flex: none; }
+
+  /* Vecinos */
+  .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .tarjeta h2 { margin: 0 0 10px; font-size: 17px; }
+  .opciones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .opciones button { background: var(--panel2); padding: 12px 4px; font-size: 15px; border: 2px solid transparent; }
+  .opciones button.sel[data-e="bien"] { border-color: var(--acento); }
+  .opciones button.sel[data-e="ayuda"], .opciones button.sel[data-e="herido"] { border-color: var(--sos); }
+  .tarjeta label { display: block; font-size: 14px; color: var(--suave); margin: 8px 0 4px; }
+  .primario { background: var(--acento); color: #fff; font-weight: 700; padding: 12px; width: 100%; margin-top: 12px; }
+  .resumen { display: flex; gap: 8px; margin-bottom: 12px; }
+  .resumen div { flex: 1; text-align: center; background: var(--panel); border-radius: 12px; padding: 8px; font-size: 13px; color: var(--suave); }
+  .resumen b { display: block; font-size: 22px; color: var(--texto); }
+  .vecino { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--borde); }
+  .vecino:first-child { border-top: 0; }
+  .vecino .ico { font-size: 24px; }
+  .vecino .det { flex: 1; font-size: 15px; }
+  .vecino .det small { color: var(--suave); display: block; }
+
+  /* Ventanas */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none; align-items: center;
+    justify-content: center; padding: 16px; z-index: 10; }
+  .modal.abierto { display: flex; }
+  .modal .caja { background: var(--panel); border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; }
+  .modal h2 { margin: 0 0 6px; }
+  .modal p { color: var(--suave); margin: 0 0 12px; font-size: 15px; }
+  .fila { display: flex; gap: 8px; margin-top: 12px; }
+  .fila button { flex: 1; padding: 12px; }
+  .secundario { background: var(--panel2); }
+  .peligro { background: var(--sos); color: #fff; font-weight: 800; }
+  #aviso { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--aviso); color: #000;
+    padding: 10px 16px; border-radius: 10px; font-weight: 600; display: none; z-index: 20; max-width: 90%; text-align: center; }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <span id="punto" title="Conexión con la central"></span>
+  <h1>📻 Radio Barrio <small id="yoNombre" style="color:var(--suave);font-weight:400"></small></h1>
+  <button id="btnSos">SOS</button>
+</header>
+<nav id="tabs">
+  <button data-canal="general" class="activo">General<span class="badge oculto"></span></button>
+  <button data-canal="emergencias">🚨 Urgente<span class="badge oculto"></span></button>
+  <button data-canal="recursos">📦 Recursos<span class="badge oculto"></span></button>
+  <button data-canal="vecinos">👥 Vecinos</button>
+</nav>
+<main id="lista"></main>
+<main id="vecinos" class="oculto">
+  <div class="tarjeta">
+    <h2>¿Cómo estás?</h2>
+    <div class="opciones">
+      <button data-e="bien">✅ Bien</button>
+      <button data-e="ayuda">🆘 Ayuda</button>
+      <button data-e="herido">🩹 Heridos</button>
+    </div>
+    <label for="lugar">¿Dónde estás? (calle, número, referencia)</label>
+    <input id="lugar" maxlength="120" placeholder="Ej: Los Aromos 245, casa verde">
+    <label for="ofrece">Puedo ofrecer (opcional)</label>
+    <input id="ofrece" maxlength="200" placeholder="Ej: agua, generador, primeros auxilios">
+    <button class="primario" id="btnEstado">Publicar mi estado</button>
+  </div>
+  <div class="resumen" id="resumen"></div>
+  <div class="tarjeta"><h2>Vecinos reportados</h2><div id="listaVecinos"></div></div>
+</main>
+<footer id="redactor">
+  <button class="icono" id="btnVoz" title="Nota de voz">🎤</button>
+  <button class="icono" id="btnFoto" title="Foto">📷</button>
+  <textarea id="texto" maxlength="1000" placeholder="Escribe un mensaje…"></textarea>
+  <button id="btnEnviar">Enviar</button>
+</footer>
+<input type="file" id="archVoz" accept="audio/*" capture class="oculto">
+<input type="file" id="archFoto" accept="image/*" capture="environment" class="oculto">
+
+<div class="modal" id="modalNombre">
+  <div class="caja">
+    <h2>Bienvenido a Radio Barrio</h2>
+    <p>Chat de vecinos que funciona sin internet. Escribe tu nombre para que te reconozcan.</p>
+    <input id="inNombre" maxlength="40" placeholder="Ej: Ana (pasaje 3)" autocomplete="name">
+    <div class="fila"><button class="primario" id="btnNombre" style="margin:0">Entrar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modalSos">
+  <div class="caja">
+    <h2>🆘 Pedir ayuda</h2>
+    <p>Se enviará una alerta a todos los vecinos conectados. Indica qué pasa y dónde estás.</p>
+    <textarea id="inSos" rows="3" maxlength="500" placeholder="Ej: Adulto mayor caído, Los Aromos 245"></textarea>
+    <div class="fila">
+      <button class="secundario" id="btnSosCancelar">Cancelar</button>
+      <button class="peligro" id="btnSosEnviar">ENVIAR ALERTA</button>
+    </div>
+  </div>
+</div>
+
+<div id="aviso"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const leer = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+  const yo = { nombre: leer('rb_nombre') || '', cliente: leer('rb_cliente') };
+  if (!yo.cliente) {
+    yo.cliente = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    guardar('rb_cliente', yo.cliente);
+  }
+
+  let canal = 'general';
+  let ultimo = 0;
+  let mensajes = [];
+  let estados = [];
+  let ahoraServidor = Date.now() / 1000;
+  let primera = true;
+  let enCurso = false, timer = null;
+  const noLeidos = { general: 0, emergencias: 0, recursos: 0 };
+  const ICONO = { bien: '✅', ayuda: '🆘', herido: '🩹' };
+  const ORDEN = { herido: 0, ayuda: 1, bien: 2 };
+
+  // ---------- utilidades ----------
+  function aviso(txt, ms = 3000) {
+    const a = $('#aviso'); a.textContent = txt; a.style.display = 'block';
+    clearTimeout(aviso.t); aviso.t = setTimeout(() => a.style.display = 'none', ms);
+  }
+  function hora(ts) {
+    return new Date(ts * 1000).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  }
+  function hace(ts) {
+    const s = Math.max(0, ahoraServidor - ts);
+    if (s < 60) return 'recién';
+    if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+    return `hace ${Math.floor(s / 3600)} h`;
+  }
+  let ctxAudio = null;
+  function alerta() {
+    try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch (e) {}
+    try {
+      ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.35, 0.7].forEach(t => {
+        const o = ctxAudio.createOscillator(), g = ctxAudio.createGain();
+        o.frequency.value = 880; o.type = 'square'; g.gain.value = 0.15;
+        o.connect(g); g.connect(ctxAudio.destination);
+        o.start(ctxAudio.currentTime + t); o.stop(ctxAudio.currentTime + t + 0.2);
+      });
+    } catch (e) {}
+  }
+  function cerca() {
+    const l = $('#lista'); return l.scrollHeight - l.scrollTop - l.clientHeight < 120;
+  }
+
+  // ---------- mensajes ----------
+  function nodoMensaje(m) {
+    const d = document.createElement('div');
+    d.className = 'msg' + (m.cliente === yo.cliente ? ' mio' : '') + (m.sos ? ' sos' : '');
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const b = document.createElement('b'); b.textContent = (m.sos ? '🆘 ' : '') + m.nombre;
+    meta.append(b, ' · ' + hora(m.ts));
+    d.append(meta);
+    if (m.tipo === 'texto') {
+      const t = document.createElement('div'); t.textContent = m.texto; d.append(t);
+    } else if (m.tipo === 'audio') {
+      const a = document.createElement('audio'); a.controls = true; a.preload = 'none'; a.src = m.archivo; d.append(a);
+    } else if (m.tipo === 'imagen') {
+      const i = document.createElement('img'); i.loading = 'lazy'; i.src = m.archivo; i.alt = 'Foto de ' + m.nombre;
+      i.onclick = () => window.open(m.archivo, '_blank'); d.append(i);
+    }
+    return d;
+  }
+  function pintarTodo() {
+    const l = $('#lista'); l.textContent = '';
+    const delCanal = mensajes.filter(m => m.canal === canal);
+    if (!delCanal.length) {
+      const v = document.createElement('div'); v.className = 'vacio';
+      v.textContent = canal === 'emergencias' ? 'Sin emergencias reportadas.' : 'Aún no hay mensajes. ¡Saluda a tus vecinos!';
+      l.append(v);
+    }
+    delCanal.forEach(m => l.append(nodoMensaje(m)));
+    l.scrollTop = l.scrollHeight;
+  }
+  function pintarTabs() {
+    document.querySelectorAll('#tabs button').forEach(b => {
+      const n = noLeidos[b.dataset.canal], s = b.querySelector('.badge');
+      if (!s) return;
+      s.textContent = n; s.classList.toggle('oculto', !n);
+    });
+    const total = noLeidos.general + noLeidos.emergencias + noLeidos.recursos;
+    document.title = (noLeidos.emergencias ? '🆘 ' : '') + (total ? `(${total}) ` : '') + 'Radio Barrio';
+  }
+
+  async function sondear() {
+    if (enCurso) return;
+    enCurso = true; clearTimeout(timer);
+    try {
+      const r = await fetch('/api/mensajes?desde=' + ultimo, { cache: 'no-store' });
+      const d = await r.json();
+      $('#punto').classList.add('ok');
+      ahoraServidor = d.ahora;
+      if (d.ultimo < ultimo) { // la central se reinició sin historial
+        mensajes = []; ultimo = 0; pintarTodo();
+      }
+      const nuevos = d.mensajes.filter(m => m.id > ultimo);
+      if (nuevos.length) {
+        const pegado = cerca();
+        const l = $('#lista');
+        let sonar = false;
+        for (const m of nuevos) {
+          mensajes.push(m);
+          if (m.canal === canal) {
+            if (l.querySelector('.vacio')) l.textContent = '';
+            l.append(nodoMensaje(m));
+          }
+          if (!primera && m.cliente !== yo.cliente) {
+            if (m.canal !== canal || document.hidden) noLeidos[m.canal]++;
+            if (m.canal === 'emergencias' || m.sos) sonar = true;
+          }
+        }
+        ultimo = nuevos[nuevos.length - 1].id;
+        if (mensajes.length > 600) mensajes = mensajes.slice(-500);
+        if (pegado || primera) l.scrollTop = l.scrollHeight;
+        if (sonar) alerta();
+        pintarTabs();
+      }
+      estados = d.estados;
+      if (canal === 'vecinos') pintarVecinos();
+      primera = false;
+    } catch (e) {
+      $('#punto').classList.remove('ok');
+    }
+    enCurso = false;
+    timer = setTimeout(sondear, 2000);
+  }
+
+  async function enviarTexto(texto, sos = false) {
+    const r = await fetch('/api/mensajes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: yo.nombre, cliente: yo.cliente, canal: sos ? 'emergencias' : canal, texto, sos })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'error');
+    sondear();
+  }
+
+  async function reducirImagen(file) {
+    try {
+      const url = URL.createObjectURL(file);
+      const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+      const escala = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * escala); c.height = Math.round(img.height * escala);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      return await new Promise(ok => c.toBlob(b => ok(b || file), 'image/jpeg', 0.7));
+    } catch (e) { return file; }
+  }
+
+  async function subir(file) {
+    if (!file) return;
+    if (canal === 'vecinos') return;
+    if (file.type.startsWith('image/')) file = await reducirImagen(file);
+    if (file.size > 8e6) return aviso('Archivo muy grande (máximo 8 MB)');
+    aviso('Enviando…', 60000);
+    try {
+      const r = await fetch('/api/archivo', {
+        method: 'POST', body: file,
+        headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-Nombre': encodeURIComponent(yo.nombre),
+                   'X-Cliente': yo.cliente, 'X-Canal': canal }
+      });
+      if (!r.ok) throw new Error((await r.json()).error || 'error');
+      aviso('Enviado ✓', 1500); sondear();
+    } catch (e) { aviso('No se pudo enviar: ' + e.message); }
+  }
+
+  // ---------- vecinos ----------
+  let miEstado = leer('rb_estado') || '';
+  $('#lugar').value = leer('rb_lugar') || '';
+  $('#ofrece').value = leer('rb_ofrece') || '';
+  function marcarOpcion() {
+    document.querySelectorAll('.opciones button').forEach(b => b.classList.toggle('sel', b.dataset.e === miEstado));
+  }
+  marcarOpcion();
+  document.querySelectorAll('.opciones button').forEach(b => b.onclick = () => { miEstado = b.dataset.e; marcarOpcion(); });
+
+  async function publicarEstado(estado) {
+    const lugar = $('#lugar').value.trim(), ofrece = $('#ofrece').value.trim();
+    guardar('rb_estado', estado); guardar('rb_lugar', lugar); guardar('rb_ofrece', ofrece);
+    const r = await fetch('/api/estado', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cliente: yo.cliente, nombre: yo.nombre, estado, lugar, ofrece })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'error');
+    sondear();
+  }
+  $('#btnEstado').onclick = async () => {
+    if (!miEstado) return aviso('Elige primero cómo estás');
+    try { await publicarEstado(miEstado); aviso('Estado publicado ✓', 1500); }
+    catch (e) { aviso('No se pudo publicar: ' + e.message); }
+  };
+
+  function pintarVecinos() {
+    const cuenta = { bien: 0, ayuda: 0, herido: 0 };
+    estados.forEach(e => cuenta[e.estado]++);
+    const res = $('#resumen'); res.textContent = '';
+    [['herido', 'Heridos'], ['ayuda', 'Piden ayuda'], ['bien', 'Están bien']].forEach(([k, t]) => {
+      const d = document.createElement('div'); const b = document.createElement('b');
+      b.textContent = ICONO[k] + ' ' + cuenta[k]; d.append(b, t); res.append(d);
+    });
+    const l = $('#listaVecinos'); l.textContent = '';
+    if (!estados.length) { l.textContent = 'Nadie ha publicado su estado todavía.'; return; }
+    [...estados].sort((a, b) => ORDEN[a.estado] - ORDEN[b.estado] || b.ts - a.ts).forEach(e => {
+      const v = document.createElement('div'); v.className = 'vecino';
+      const i = document.createElement('div'); i.className = 'ico'; i.textContent = ICONO[e.estado];
+      const det = document.createElement('div'); det.className = 'det';
+      const n = document.createElement('b'); n.textContent = e.nombre; det.append(n);
+      if (e.lugar) { const s = document.createElement('small'); s.textContent = '📍 ' + e.lugar; det.append(s); }
+      if (e.ofrece) { const s = document.createElement('small'); s.textContent = '🤝 Ofrece: ' + e.ofrece; det.append(s); }
+      const t = document.createElement('small'); t.textContent = hace(e.ts); det.append(t);
+      v.append(i, det); l.append(v);
+    });
+  }
+
+  // ---------- pestañas ----------
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+    canal = b.dataset.canal;
+    document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('activo', x === b));
+    const esVecinos = canal === 'vecinos';
+    $('#lista').classList.toggle('oculto', esVecinos);
+    $('#vecinos').classList.toggle('oculto', !esVecinos);
+    $('#redactor').classList.toggle('oculto', esVecinos);
+    if (esVecinos) pintarVecinos();
+    else { noLeidos[canal] = 0; pintarTodo(); pintarTabs(); }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && canal !== 'vecinos') { noLeidos[canal] = 0; pintarTabs(); }
+  });
+
+  // ---------- redactor ----------
+  async function enviarDesdeCaja() {
+    const t = $('#texto').value.trim();
+    if (!t) return;
+    $('#btnEnviar').disabled = true;
+    try { await enviarTexto(t); $('#texto').value = ''; }
+    catch (e) { aviso('No se pudo enviar. ¿Sigues conectado al Wi-Fi de la central?'); }
+    $('#btnEnviar').disabled = false;
+  }
+  $('#btnEnviar').onclick = enviarDesdeCaja;
+  $('#texto').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarDesdeCaja(); }
+  });
+  $('#btnVoz').onclick = () => $('#archVoz').click();
+  $('#btnFoto').onclick = () => $('#archFoto').click();
+  $('#archVoz').onchange = e => { subir(e.target.files[0]); e.target.value = ''; };
+  $('#archFoto').onchange = e => { subir(e.target.files[0]); e.target.value = ''; };
+
+  // ---------- SOS ----------
+  $('#btnSos').onclick = () => {
+    $('#inSos').value = $('#lugar').value ? 'Estoy en: ' + $('#lugar').value + '. ' : '';
+    $('#modalSos').classList.add('abierto'); $('#inSos').focus();
+  };
+  $('#btnSosCancelar').onclick = () => $('#modalSos').classList.remove('abierto');
+  $('#btnSosEnviar').onclick = async () => {
+    const t = $('#inSos').value.trim() || 'Necesito ayuda urgente';
+    try {
+      await enviarTexto(t, true);
+      miEstado = 'ayuda'; marcarOpcion();
+      publicarEstado('ayuda').catch(() => {});
+      $('#modalSos').classList.remove('abierto');
+      aviso('Alerta enviada a todos los vecinos', 3000);
+    } catch (e) { aviso('No se pudo enviar la alerta. Revisa la conexión.'); }
+  };
+
+  // ---------- nombre ----------
+  function mostrarNombre() { $('#yoNombre').textContent = yo.nombre ? '· ' + yo.nombre : ''; }
+  function entrar() {
+    const n = $('#inNombre').value.trim();
+    if (!n) return aviso('Escribe tu nombre');
+    yo.nombre = n; guardar('rb_nombre', n); mostrarNombre();
+    $('#modalNombre').classList.remove('abierto');
+  }
+  $('#btnNombre').onclick = entrar;
+  $('#inNombre').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+  $('#yoNombre').onclick = () => { $('#inNombre').value = yo.nombre; $('#modalNombre').classList.add('abierto'); };
+  if (!yo.nombre) $('#modalNombre').classList.add('abierto');
+  mostrarNombre();
+
+  pintarTodo();
+  sondear();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Clave de firma de la app: PRIVADA, nunca subir
+walkie-android/firma/
+*.jks
+*.keystore
+firma.properties
+
+# Rutas locales y compilación
+local.properties
+.gradle/
+.kotlin/
+build/
+*.apk
+*.idsig
+*.aab
+
+# Datos del servidor web (mensajes de vecinos)
+datos/
+
+# Editores
+.idea/
+*.iml
+.DS_Store
